@@ -56,6 +56,14 @@ get_version_package(){
   echo $pkg_version
 }
 
+install_package(){
+  local name="$1"
+  local version
+
+  version=$(get_version_package "$name")
+  save_package "$name" "$PKG_MANAGER" "$version" "" ""
+}
+
 db_init
 while [ -n "${1:-}" ]; do
 case "$1" in
@@ -66,8 +74,7 @@ case "$1" in
 
     echo "==> Installing package: $pkg_name"
     $SU $PKG_MANAGER -S --noconfirm "$pkg_name"
-    pkg_version=$(get_version_package "$pkg_name")
-    action=$(save_package "$pkg_name" "$PKG_MANAGER" "$pkg_version" "" "")
+    action=$(install_package "$pkg_name")
 
     echo "==> Package $pkg_name has been successfully $action"
     ;;
