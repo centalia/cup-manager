@@ -49,40 +49,43 @@ get_version_package(){
 
   echo $pkg_version
 }
+#
+#package_exists(){ ##TODO: схлопнуть в save_package
+#  local name="$1"
+#
+#  local exists=$(sqlite3 "$DB_PKGS" "SELECT EXISTS(SELECT 1 FROM packages WHERE name='$name')")
+#  [ "$exists" = "1"  ]
+#}
 
-package_exists(){
-  local name="$1"
-
-  local exists=$(sqlite3 "$DB_PKGS" "SELECT EXISTS(SELECT 1 FROM packages WHERE name='$name')")
-  [ "$exists" = "1"  ]
-}
-
-# TODO 1: Вынести case с ключом install в функцию
-# TODO 2: Вынести case с ключом search в функцию
+# TODO: различать installed/updated в сообщении install
 
 db_init
-while [ -n "$1" ]; do
+while [ -n "${1:-}" ]; do
 case "$1" in
   install)
     shift
     pkg_name="$1"
+    shift
     echo "==> Installing package: $pkg_name"
     $SU $PKG_MANAGER -S --noconfirm "$pkg_name"
-
-    if [ $? -eq 0 ]; then
-      pkg_version=$(get_version_package "$pkg_name")
-      if package_exists "$pkg_name"; then
-        sqlite3 "$DB_PKGS" "UPDATE packages SET version = '$pkg_version', update_date = (datetime('now', 'localtime')) WHERE name='$pkg_name'"
-        echo "==> Package $pkg_name has been successfully updated"
-      else
-        add_package_to_db "$pkg_name" "$PKG_MANAGER" "$pkg_version" "" ""
-        echo "==> Package $pkg_name has been successfully installed"
-      fi
-    exit 0
-    else
-      echo "==> Package installation error"
-      exit 1
-    fi
+    pkg_version=$(get_version_package "$pkg_name")
+#    if [ $? -eq 0 ]; then
+#      pkg_version=$(get_version_package "$pkg_name")
+#      if package_exists "$pkg_name"; then
+#        sqlite3 "$DB_PKGS" "UPDATE packages SET version = '$pkg_version', update_date = (datetime('now', 'localtime')) WHERE name='$pkg_name'"
+#        echo "==> Package $pkg_name has been successfully updated"
+#      else
+#        add_package_to_db "$pkg_name" "$PKG_MANAGER" "$pkg_version" "" ""
+#        echo "==> Package $pkg_name has been successfully installed"
+#      fi
+#
+#    exit 0
+#    else
+#      echo "==> Package installation error"
+#      exit 1
+#    fi
+      save_package "$pkg_name" "$PKG_MANAGER" "$pkg_version" "" ""
+      echo "==> Package $pkg_name has been successfully installed"
     ;;
   remove)
     shift
