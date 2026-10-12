@@ -24,7 +24,7 @@ db_init(){
   );"
 }
 
-add_package_to_db(){
+save_package(){
   local name="$1"
   local source="$2"
   local version="$3"
@@ -32,7 +32,10 @@ add_package_to_db(){
   local build_type="$5"
 
   sqlite3 "$DB_PKGS" "INSERT INTO packages(name, source, version, repo_url, build_type)
-  VALUES ('$name', '$source', '$version', '$repo_url', '$build_type')"
+  VALUES ('$name', '$source', '$version', '$repo_url', '$build_type')
+  ON CONFLICT(name) DO UPDATE SET
+      version=excluded.version,
+      update_date=(datetime('now', 'localtime'))"
 }
 
 get_version_package(){
