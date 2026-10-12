@@ -1,0 +1,11 @@
+#IDE
+.idea
+*.iml
+
+#Backups
+*~
+*.swo
+*.swp
+
+#for macOS
+.DS_Store
