@@ -11,8 +11,7 @@
 
 Склонируй репу:
 ``` bash
-git clone <url>
-chmod +x cup.sh
+git clone [<url>](https://github.com/centalia/cup-manager.git) && chmod +x cup.sh
 ```
 
 Добавь alias в ~/.bashrc:
