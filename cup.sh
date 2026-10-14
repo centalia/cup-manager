@@ -57,63 +57,51 @@ get_version_package(){
   echo $pkg_version
 }
 
-install_package(){
+cmd_install(){
   local name="$1"
   local action
   local version
 
   echo "==> Installing package: $name"
-
-  $SU $PKG_MANAGER -S --noconfirm "$name"
-  version=$(get_version_package "$name")
-  action=$(write_package "$name" "$PKG_MANAGER" "$version" "" "")
-
-  echo "==> Package $name has been successfully $action"
+  if $SU $PKG_MANAGER -S --noconfirm "$name"; then
+    version=$(get_version_package "$name")
+    action=$(write_package "$name" "$PKG_MANAGER" "$version" "" "")
+    echo "==> Package $name has been successfully $action"
+  else
+    echo "==> Failed to install $name"
+    return 1
+  fi
 }
 
-search_package(){
+cmd_search(){
   local name="$1"
 
   echo "==> Searching package: $name"
-
   $SU $PKG_MANAGER -Ss "$name"
 }
 
-db_init
+cmd_remove(){
+  local name="$1"
 
-while [ -n "${1:-}" ]; do
-case "$1" in
-  install)
-    shift
-    install_package "$1"
-    shift
-  ;;
-  remove)
-    shift
-    echo "==> Removing package: $1"
-    $SU $PKG_MANAGER -Rns --noconfirm "$1"
-    exit 0
-    ;;
-  update)
-    echo "==> Full update system"
-    $SU $PKG_MANAGER -Syu --noconfirm
-    exit 0
-    ;;
-  search)
-    shift
-    search_package "$1"
-    shift
-    ;;
-  clean-cache)
-    shift
-    echo "==> Cleaning package cache: "
-    $SU $PKG_MANAGER -Sc --noconfirm
-    exit 0
-    ;;
-  gitbuild)
-    repo="$2"
-    shift 2
-    no_install=false
+  echo "==> Removing package: $name"
+  $SU $PKG_MANAGER -Rns --noconfirm "$name"
+}
+
+cmd_update(){
+  echo "==> Full update system"
+  $SU $PKG_MANAGER -Syu --noconfirm
+}
+
+cmd_clean_cache(){
+
+  echo "==> Cleaning package cache: "
+  $SU $PKG_MANAGER -Sc --noconfirm
+}
+
+cmd_gitbuild(){
+  local repo="$1"
+  shift
+  local no_install=false
 
     while [ $# -gt 0 ]; do
       if [ "$1" = "--no-install" ]; then
@@ -122,13 +110,14 @@ case "$1" in
       shift
     done
 
-    dir=$(basename "$repo" .git)
+  local dir
+  dir=$(basename "$repo" .git)
 
     echo "==> Cloning repository $dir"
     git clone "$repo"
 
     echo "==> Enter in directory: $dir"
-    cd "$dir" || exit 1
+    cd "$dir"
 
     echo "==> Building package: $dir (no_install: $no_install )"
     if [ -f PKGBUILD ]; then
@@ -166,9 +155,42 @@ case "$1" in
         fi
     else
         echo "Error: Not found PKGBUILD or Makefile"
-        exit 1
+        return 1
     fi
-    exit 0
+    return 0
+}
+
+db_init
+
+while [ -n "${1:-}" ]; do
+case "$1" in
+  install)
+    shift
+    cmd_install "$1" || exit 1
+    shift
+  ;;
+  remove)
+    shift
+    cmd_remove "$1"
+    shift
+    ;;
+  update)
+    shift
+    cmd_update
+    ;;
+  search)
+    shift
+    cmd_search "$1"
+    shift
+    ;;
+  clean-cache)
+    shift
+    cmd_clean_cache
+    ;;
+  gitbuild)
+    shift
+    cmd_gitbuild "$@"
+    set --
     ;;
   *)
     echo "No parameters found"
