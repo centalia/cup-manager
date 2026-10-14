@@ -24,7 +24,7 @@ db_init(){
   );"
 }
 
-save_package(){
+write_package(){
   local name="$1"
   local source="$2"
   local version="$3"
@@ -46,6 +46,7 @@ save_package(){
 
 get_version_package(){
   local name="$1"
+  local pkg_version
   pkg_version=$($SU $PKG_MANAGER -Qi $name | grep "Version" | awk '{print $3}' )
 
   if [ -z "$pkg_version" ]; then
@@ -56,27 +57,46 @@ get_version_package(){
   echo $pkg_version
 }
 
+#pkg(){
+#  local name="$1"
+#  local version
+#
+#  version=$(get_version_package "$name")
+#  save_package "$name" "$PKG_MANAGER" "$version" "" ""
+#}
+
 install_package(){
   local name="$1"
+  local action
   local version
 
+  echo "==> Installing package: $name"
+
+  $SU $PKG_MANAGER -S --noconfirm "$name"
   version=$(get_version_package "$name")
-  save_package "$name" "$PKG_MANAGER" "$version" "" ""
+  action=$(write_package "$name" "$PKG_MANAGER" "$version" "" "")
+
+  echo "==> Package $name has been successfully $action"
 }
 
 db_init
+
 while [ -n "${1:-}" ]; do
 case "$1" in
   install)
-    shift
-    pkg_name="$1"
-    shift
-
-    echo "==> Installing package: $pkg_name"
-    $SU $PKG_MANAGER -S --noconfirm "$pkg_name"
-    action=$(install_package "$pkg_name")
-
-    echo "==> Package $pkg_name has been successfully $action"
+#    shift
+#    pkg_name="$1"
+#    shift
+#
+#    echo "==> Installing package: $pkg_name"
+##    $SU $PKG_MANAGER -S --noconfirm "$pkg_name"
+#    pkg_install "$pkg_name"
+#    action=$(install_package "$pkg_name")
+#
+#    echo "==> Package $pkg_name has been successfully $action"
+  shift
+  install_package "$@"
+  shift
     ;;
   remove)
     shift
