@@ -114,10 +114,10 @@ cmd_gitbuild(){
   dir=$(basename "$repo" .git)
 
     echo "==> Cloning repository $dir"
-    git clone "$repo"
+    git clone "$repo" || return 1
 
     echo "==> Enter in directory: $dir"
-    cd "$dir"
+    cd "$dir" || return 1
 
     echo "==> Building package: $dir (no_install: $no_install )"
     if [ -f PKGBUILD ]; then
@@ -129,7 +129,7 @@ cmd_gitbuild(){
         fi
     elif [ -f autogen.sh ]; then
       echo "Found Autotools"
-      ./autogen.sh && ./configure || exit 1
+      ./autogen.sh && ./configure || return 1
       make -j$(nproc)
         if [ "$no_install" != "true" ]; then
           $SU make install
@@ -138,7 +138,7 @@ cmd_gitbuild(){
         fi
     elif [ -f configure ]; then
       echo "Found Autotools, pre-genereted"
-      ./configure || exit 1
+      ./configure || return 1
       make -j$(nproc)
         if [ "$no_install" != "true" ]; then
           $SU make install
