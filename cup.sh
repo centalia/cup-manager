@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-# cup — Custom Universal Packager
+# cup
 # Author: Centalia
 # License: MIT
 
@@ -57,14 +57,6 @@ get_version_package(){
   echo $pkg_version
 }
 
-#pkg(){
-#  local name="$1"
-#  local version
-#
-#  version=$(get_version_package "$name")
-#  save_package "$name" "$PKG_MANAGER" "$version" "" ""
-#}
-
 install_package(){
   local name="$1"
   local action
@@ -79,25 +71,23 @@ install_package(){
   echo "==> Package $name has been successfully $action"
 }
 
+search_package(){
+  local name="$1"
+
+  echo "==> Searching package: $name"
+
+  $SU $PKG_MANAGER -Ss "$name"
+}
+
 db_init
 
 while [ -n "${1:-}" ]; do
 case "$1" in
   install)
-#    shift
-#    pkg_name="$1"
-#    shift
-#
-#    echo "==> Installing package: $pkg_name"
-##    $SU $PKG_MANAGER -S --noconfirm "$pkg_name"
-#    pkg_install "$pkg_name"
-#    action=$(install_package "$pkg_name")
-#
-#    echo "==> Package $pkg_name has been successfully $action"
-  shift
-  install_package "$@"
-  shift
-    ;;
+    shift
+    install_package "$1"
+    shift
+  ;;
   remove)
     shift
     echo "==> Removing package: $1"
@@ -111,9 +101,8 @@ case "$1" in
     ;;
   search)
     shift
-    echo "==> Searching package: $1"
-    $SU $PKG_MANAGER -Ss "$1"
-    exit 0
+    search_package "$1"
+    shift
     ;;
   clean-cache)
     shift
