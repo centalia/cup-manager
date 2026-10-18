@@ -2,7 +2,6 @@
 set -euo pipefail
 # cup
 # Author: Centalia
-# License: MIT
 
 SU="sudo"
 PKG_MANAGER="pacman"
@@ -32,9 +31,11 @@ write_package(){
   local build_type="$5"
 
   local exists
-  exists=$(sqlite3 "$DB_PKGS" "SELECT EXISTS(SELECT 1 FROM packages WHERE name='$name')")
+  exists=$(sqlite3 "$DB_PKGS" "SELECT EXISTS(SELECT 1 FROM packages \
+                                WHERE name='$name')")
       if [ "$exists" = "1"  ]; then
-        sqlite3 "$DB_PKGS" "UPDATE packages SET version = '$version', update_date = (datetime('now', 'localtime')) WHERE name='$name'"
+        sqlite3 "$DB_PKGS" "UPDATE packages SET version = '$version', update_date = (datetime('now', 'localtime')) \
+                            WHERE name='$name'"
         echo "updated"
       else
         sqlite3 "$DB_PKGS" "INSERT INTO packages(name, source, version, repo_url, build_type)
@@ -159,7 +160,25 @@ cmd_gitbuild(){
         exit 1
     fi
     )
+    return $?
+}
+
+cmd_list(){
+  local count
+  count=$(sqlite3 "$DB_PKGS" "\
+  SELECT COUNT(*) \
+  FROM packages")
+  if [ "$count" -eq 0 ]; then
+    echo "==> No packages tracked yet"
     return 0
+  else
+    echo "==> Tracked $count packages"
+    echo " "
+    sqlite3 -header -column "$DB_PKGS" "\
+      SELECT name, version, source, install_date, update_date \
+      FROM packages \
+      ORDER BY name;"
+  fi
 }
 
 db_init
@@ -192,6 +211,10 @@ case "$1" in
   gitbuild)
     shift
     cmd_gitbuild "$@"
+    set --
+    ;;
+  list)
+    cmd_list
     set --
     ;;
   *)
