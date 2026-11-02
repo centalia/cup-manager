@@ -107,26 +107,9 @@ check_yay(){
 }
 
 cmd_install(){
-  local pkg_name=""
   local action
   local version
   local use_yay=false
-
-
-#  while [ $# -gt 0 ]; do
-#    case "$1" in
-#      --aur|-a)
-#        use_yay=true
-#      ;;
-#      -*)
-#        echo "Unknown flag"
-#        return 1
-#      ;;
-#      *)
-#        pkg_name="$1"
-#    esac
-#    shift
-#  done
 
   if [ "$1" = "--aur" ] || [ "$1" = "-a" ]; then
     use_yay=true
@@ -145,9 +128,12 @@ cmd_install(){
     return 1
   fi
 
-  echo "==> Installing package: $pkg_name"
-
-  if [ "$use_yay" = "true" ]; then
+  if  [ "$use_yay" = "true" ]; then
+    if ! command -v yay >/dev/null 2>&1; then
+      echo "==> Error: yay is not installed. Run 'cup yay' to install it first."
+      return 1
+    fi
+    echo "==> Installing package: $pkg_name via yay"
     if yay -S --noconfirm "$pkg_name"; then
       version=$(get_version_package "$pkg_name")
       action=$(write_package "$pkg_name" "yay" "$version" "" "")
@@ -157,6 +143,7 @@ cmd_install(){
       return 1
     fi
   else
+    echo "==> Installing package: $pkg_name via $PKG_MANAGER"
     if $SU $PKG_MANAGER -S --noconfirm "$pkg_name"; then
       version=$(get_version_package "$pkg_name")
       action=$(write_package "$pkg_name" "$PKG_MANAGER" "$version" "" "")
@@ -169,10 +156,42 @@ cmd_install(){
 }
 
 cmd_search(){
-  local name="$1"
+  local use_yay=false
 
-  echo "==> Searching package: $name"
-  $SU $PKG_MANAGER -Ss "$name"
+  if [ "$1" = "--aur" ] || [ "$1" = "-a" ]; then
+    use_yay=true
+    shift
+  fi
+
+  local pkg_name="$1"
+
+  if [ $# -gt 1 ]; then
+    echo "==> Error: Too many arguments."
+    return 1
+  fi
+
+  if [ -z "$pkg_name" ]; then
+    echo "==> Error: no package name provided"
+    return 1
+  fi
+
+  echo "==> Searching package: $pkg_name"
+   if [ "$use_yay" = "true" ]; then
+      if ! command -v yay >/dev/null 2>&1; then
+        echo "==> Error: yay is not installed. Cannot search AUR."
+        return 1
+      fi
+      echo "==> Searching in AUR..."
+      yay -Ss --aur "$pkg_name"
+    else
+      if command -v yay >/dev/null 2>&1; then
+        echo "==> Searching everywhere (official + AUR)..."
+        yay -Ss "$pkg_name"
+      else
+        echo "==> Searching in official repositories..."
+        $SU $PKG_MANAGER -Ss "$pkg_name"
+      fi
+    fi
 }
 
 cmd_remove(){
@@ -295,8 +314,8 @@ case "$1" in
     ;;
   search)
     shift
-    cmd_search "$1"
-    shift
+    cmd_search "$@"
+    set --
     ;;
   clean-cache)
     shift
