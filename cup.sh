@@ -9,6 +9,8 @@ PKG_MANAGER="pacman"
 DB_DIR=$HOME/.cup
 DB_PKGS=$DB_DIR/db.sqlite3
 
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+
 db_init(){
   mkdir -p "$DB_DIR"
   sqlite3 "$DB_PKGS" "CREATE TABLE IF NOT EXISTS packages(
@@ -311,6 +313,24 @@ cmd_fix(){
   fi
 }
 
+cmd_modules(){
+  local file
+  local modules_dir=$SCRIPT_DIR/"modules"
+  local module_file
+  local module
+
+  if [ -d "$modules_dir" ]; then
+    for file in "$modules_dir"/*.sh; do
+      if [ ! -f "$file" ]; then continue; fi
+      module_file=${file##*/}
+      module=${module_file%.sh}
+      echo "==> Found Module $module"
+    done
+    else
+      echo "==> Modules not found"
+  fi
+}
+
 db_init
 
 while [ -n "${1:-}" ]; do
@@ -351,9 +371,19 @@ case "$1" in
     cmd_fix
     set --
     ;;
+  modules)
+    cmd_modules
+    set --
+    ;;
   *)
-    echo "No parameters found"
-    exit 0
+    if [ -f "$SCRIPT_DIR/modules/$1.sh" ]; then
+        source "$SCRIPT_DIR/modules/$1.sh"
+        "cmd_install_$1"
+    else
+        echo "==> Error: Command '$1' not found"
+        exit 1
+    fi
+    set --
     ;;
   esac
 done

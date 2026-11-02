@@ -1,5 +1,3 @@
-#!/bin/bash
-set -euo pipefail
 # cup - Yandex Music Modules
 # Author: Centalia
 
@@ -52,7 +50,7 @@ else
 fi
 }
 
-cmd_install_yandexmusic(){
+cmd_install_yamusic(){
   local temp_dir
 
   echo "==> Checking debtap"
@@ -78,7 +76,6 @@ cmd_install_yandexmusic(){
   )
   echo "==> Cleaning temporary directory"
   rm -rf "$temp_dir"
+  write_package "Yandex Music" "yamusic" "$(get_version_package "yandexmusic")" "" ""
   return 0
 }
-
-cmd_install_yandexmusic
