@@ -4,14 +4,13 @@
 
 ## Статус
 
-В активной разработке. Сейчас работает только `pacman`.
-Остальное — в планах.
+В активной разработке. Поддерживается `pacman`, `yay` и система подключаемых модулей.
 
 ## Установка
 
 Склонируй репу:
 ``` bash
-git clone [<url>](https://github.com/centalia/cup-manager.git) && chmod +x cup.sh
+git clone https://github.com/centalia/cup-manager.git && chmod +x cup.sh
 ```
 
 Добавь alias в ~/.bashrc:
@@ -20,15 +19,29 @@ alias cup='bash /path/to/cup.sh'
 ```
 ## Использование
 ~~~
-cup install <пакет>     # установить пакет
-cup remove <пакет>      # удалить пакет
-cup update              # обновить систему
-cup search <запрос>     # найти пакет
-cup clean-cache         # очистить кэш пакетов
-cup gitbuild <repo>     # собрать пакет из git-репозитория
+cup install <пакет>         # установить пакет из официальных репозиториев
+cup install --aur <пакет>   # установить пакет из AUR (через yay)
+cup remove <пакет>          # удалить пакет
+cup update                  # обновить систему
+cup search <запрос>         # найти пакет везде (pacman + AUR)
+cup search --aur <запрос>   # искать только в AUR
+cup list                    # показать локальную БД установленных пакетов
+cup fix                     # удалить зависший лок pacman (db.lck)
+cup modules                 # список подключенных модулей
+cup clean-cache             # очистить кэш пакетов
+cup gitbuild <repo>         # собрать пакет из git-репозитория
 ~~~
 
 Для gitbuild доступен флаг --no-install — собрать, но не устанавливать.
+
+## Модули
+
+cup поддерживает подключаемые модули. Файлы модулей лежат в папке modules/.
+Пример встроенного модуля:
+
+~~~ bash
+cup yamusic                 # автоматическая установка Яндекс.Музыки (через debtap)
+~~~
 
 ## Как это работает
 
@@ -45,8 +58,18 @@ snap, apt, ADB) с интерактивным выбором, откуда ст�
 - git
 - pacman (для работы с пакетами Arch Linux)
 - base-devel (для makepkg при сборке из AUR)
+- curl или wget (для модулей, скачивающих файлы)
+
+Для модуля yamusic также требуется debtap.
 
 ## Структура проекта
-
-Пока один файл — cup.sh. Планируется разбить на слои:
-db.sh, pkg.sh, cmd.sh.
+~~~
+cup-manager/
+├── cup.sh              # Главный диспетчер
+├── lib/
+│   ├── db.sh           # Работа с SQLite
+│   ├── pkg.sh          # Работа с pacman и yay
+│   └── git.sh          # Сборка из исходников
+└── modules/
+└── yamusic.sh      # Модуль Яндекс.Музыки
+~~~
