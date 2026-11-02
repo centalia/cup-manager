@@ -294,6 +294,23 @@ cmd_list(){
   fi
 }
 
+cmd_fix(){
+  local db_lock="/var/lib/pacman/db.lck"
+
+  if [ ! -f "$db_lock" ]; then
+    echo "==> Lock file not found"
+    return 0
+  fi
+
+  if pgrep -x pacman >/dev/null 2>&1 ; then
+    echo "==> Lock file found, pacman working now"
+    return 1
+  else
+    $SU rm -f "$db_lock"
+    echo "==> Lock file deleted"
+  fi
+}
+
 db_init
 
 while [ -n "${1:-}" ]; do
@@ -328,6 +345,10 @@ case "$1" in
     ;;
   list)
     cmd_list
+    set --
+    ;;
+  fix)
+    cmd_fix
     set --
     ;;
   *)
