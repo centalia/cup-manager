@@ -22,13 +22,11 @@ check_yay(){
     echo "Type no - to disagree"
     read answer
     case "$answer" in
-      yes)
-          #TODO: @Refactoring - Сделать нормальную обработку yes/no (принимать y, Y, yes, YES, игнорировать пробелы)
-          #Паттерн [Yy]|[Yy][Ee][Ss)
+      [Yy]|[Yy][Ee][Ss])
         echo "==> Install yay"
 
         echo "==> Checking dependencies"
-        if command -v git >/dev/null 2>&1; then #TODO: @Refactoring - Объединить два if
+        if command -v git >/dev/null 2>&1; then
           echo "Git installed"
         else
           cmd_install git

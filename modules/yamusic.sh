@@ -3,6 +3,8 @@
 
 DOWNLOADER=""
 
+source ../lib/pkg.sh
+
 check_debtap(){
   if command -v debtap >/dev/null 2>&1; then
     echo "==> Debtap installed"
@@ -12,11 +14,9 @@ check_debtap(){
     echo "Type no - to disagree"
     read answer
     case "$answer" in
-      yes)
-          #TODO: @Refactoring - Сделать нормальную обработку yes/no (принимать y, Y, yes, YES, игнорировать пробелы)
-          #Паттерн [Yy]|[Yy][Ee][Ss)
+      [Yy]|[Yy][Ee][Ss])
         echo "==> Install Debtap"
-        cup install --aur debtap
+        cmd_install --aur debtap
         ;;
       *)
         echo "==> Cancelled"
