@@ -1,7 +1,15 @@
+source "$SCRIPT_DIR/lib/pkg.sh"
+
 cmd_gitbuild(){
+  if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    cmd_help_gitbuild
+    shift
+  fi
+
   local repo="$1"
   shift
   local no_install=false
+
 
     while [ $# -gt 0 ]; do
       if [ "$1" = "--no-install" ]; then
@@ -61,3 +69,4 @@ cmd_gitbuild(){
     )
     return $?
 }
+

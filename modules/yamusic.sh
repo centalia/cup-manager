@@ -1,9 +1,28 @@
 # cup - Yandex Music Modules
 # Author: Centalia
 
-DOWNLOADER=""
+YM_JSON_URL="https://music-desktop-application.s3.yandex.net/stable/download.json"
 
-source ../lib/pkg.sh
+
+source $SCRIPT_DIR/lib/pkg.sh
+source $SCRIPT_DIR/lib/utils.sh
+
+get_yamusic_url(){
+  local json
+      if command -v jq >/dev/null; then
+          json=$(curl -fsSL "$YM_JSON_URL")
+          YM_URL=$(echo "$json" | jq -r '.linux')
+          YM_VERSION=$(echo "$YM_URL" | grep -oP 'Yandex_Music_amd64_\K[0-9.]+(?=\.deb)')
+      else
+          YM_URL=$(curl -fsSL "$YM_JSON_URL" | grep -o '"linux":"[^"]*"' | cut -d'"' -f4)
+          YM_VERSION=$(echo "$YM_URL" | sed -n 's/.*Yandex_Music_amd64_\([0-9.]*\)\.deb/\1/p')
+      fi
+
+      if [ -z "$YM_URL" ] || [ -z "$YM_VERSION" ]; then
+          echo "Error: failed to fetch the Yandex Music download link" >&2
+          return 1
+      fi
+}
 
 check_debtap(){
   if command -v debtap >/dev/null 2>&1; then
@@ -26,30 +45,6 @@ check_debtap(){
   fi
 }
 
-download_file(){
-  local url="$1"
-  local file="$2"
-
-  echo "==> Checking curl or wget"
-  if command -v curl >/dev/null 2>&1; then
-    echo "==> curl found"
-    DOWNLOADER="curl"
-
-    elif command -v wget >/dev/null 2>&1; then
-      echo "==> wget found"
-      DOWNLOADER="wget"
-  else
-    echo "Error: curl or wget not found"
-    return 1
-  fi
-
-if [ "$DOWNLOADER" = "curl" ]; then
-    curl -L -o "$file" "$url"
-else
-    wget -O "$file" "$url"
-fi
-}
-
 cmd_install_yamusic(){
   local temp_dir
 
@@ -57,9 +52,13 @@ cmd_install_yamusic(){
   check_debtap || return 1
 
   echo "==> Create temporary directory"
-  temp_dir=$(mktemp -d) &&
-  echo "==> Downloading Yandex.Music"
-  download_file "https://desktop.app.music.yandex.net/stable/Yandex_Music_amd64_5.125.3.deb" "$temp_dir/YandexMusic.deb" || return 1
+  temp_dir=$(mktemp -d) || return 1
+
+  echo "==> Fetching latest Yandex.Music link"
+  get_yamusic_url || return 1
+
+  echo "==> Downloading Yandex.Music $YM_VERSION"
+  download_file "$YM_URL" "$temp_dir/YandexMusic.deb" || return 1
 
   echo "==> Update Database debtap"
   sudo debtap -u

@@ -1,5 +1,5 @@
 get_version_package(){
-  local name="$1"
+  local name="${1:-}"
   local pkg_version
   pkg_version=$($SU $PKG_MANAGER -Qi $name | grep "Version" | awk '{print $3}' )
 
@@ -61,13 +61,24 @@ cmd_install(){
   local action
   local version
   local use_yay=false
+  local refresh=false
 
-  if [ "$1" = "--aur" ] || [ "$1" = "-a" ]; then
+  if [ "${1:-}" = "--aur" ] || [ "${1:-}" = "-a" ]; then
     use_yay=true
     shift
   fi
 
-  local pkg_name="$1"
+  if [ "${1:-}" = "--refresh" ]; then
+    refresh=true
+    shift
+  fi
+
+  if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    cmd_help_install
+    shift
+  fi
+
+  local pkg_name="${1:-}"
 
   if [ $# -gt 1 ]; then
     echo "==> Error: Too many arguments."
@@ -85,7 +96,13 @@ cmd_install(){
       return 1
     fi
     echo "==> Installing package: $pkg_name via yay"
-    if yay -S --noconfirm "$pkg_name"; then
+    if [ "$refresh" = "true" ]; then
+      if ! yay -Sy; then
+        echo "Error: failed to refresh package databases, check mirrors"
+        return 1
+      fi
+    fi
+    if yay -S "$pkg_name"; then
       version=$(get_version_package "$pkg_name")
       action=$(write_package "$pkg_name" "yay" "$version" "" "")
       echo "==> Package $pkg_name has been successfully $action via yay"
@@ -93,15 +110,40 @@ cmd_install(){
       echo "==> Failed to install $pkg_name"
       return 1
     fi
-  else
+    else
+    if [ "$refresh" = "true" ]; then
+      if ! $SU $PKG_MANAGER -Sy; then
+        echo "Error: failed to refresh package databases, check mirrors"
+        return 1
+      fi
+    fi
+
     echo "==> Installing package: $pkg_name via $PKG_MANAGER"
-    if $SU $PKG_MANAGER -S --noconfirm "$pkg_name"; then
+
+    if $SU $PKG_MANAGER -S "$pkg_name"; then
       version=$(get_version_package "$pkg_name")
       action=$(write_package "$pkg_name" "$PKG_MANAGER" "$version" "" "")
       echo "==> Package $pkg_name has been successfully $action via $PKG_MANAGER"
     else
-      echo "==> Failed to install $pkg_name"
-      return 1
+      if [ "$refresh" = "true" ]; then
+        echo "==> Error: failed to install $pkg_name (database already refreshed)"
+        return 1
+      fi
+
+      echo "==> Install failed, refreshing package databases (partial upgrade risk)"
+      if ! $SU $PKG_MANAGER -Sy; then
+        echo "==> Error: failed to refresh package databases, check mirrors"
+        return 1
+      fi
+
+      if $SU $PKG_MANAGER -S "$pkg_name"; then
+        version=$(get_version_package "$pkg_name")
+        action=$(write_package "$pkg_name" "$PKG_MANAGER" "$version" "" "")
+        echo "==> Package $pkg_name has been successfully $action via $PKG_MANAGER"
+      else
+        echo "==> Error: package '$pkg_name' not found or installation failed"
+        return 1
+      fi
     fi
   fi
 }
@@ -109,12 +151,17 @@ cmd_install(){
 cmd_search(){
   local use_yay=false
 
-  if [ "$1" = "--aur" ] || [ "$1" = "-a" ]; then
+  if [ "${1:-}" = "--aur" ] || [ "${1:-}" = "-a" ]; then
     use_yay=true
     shift
   fi
 
-  local pkg_name="$1"
+  if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    cmd_help_search
+    shift
+  fi
+
+  local pkg_name="${1:-}"
 
   if [ $# -gt 1 ]; then
     echo "==> Error: Too many arguments."
@@ -146,21 +193,26 @@ cmd_search(){
 }
 
 cmd_remove(){
-  local name="$1"
+  local name="${1:-}"
+
+  if [ -z "$name" ]; then
+    echo "==> Error: no package name provided"
+    return 1
+  fi
 
   echo "==> Removing package: $name"
-  $SU $PKG_MANAGER -Rns --noconfirm "$name"
+  $SU $PKG_MANAGER -Rns "$name"
 }
 
 cmd_update(){
   echo "==> Full update system"
-  $SU $PKG_MANAGER -Syu --noconfirm
+  $SU $PKG_MANAGER -Syu
 }
 
 cmd_clean_cache(){
 
   echo "==> Cleaning package cache: "
-  $SU $PKG_MANAGER -Sc --noconfirm
+  $SU $PKG_MANAGER -Sc
 }
 
 cmd_fix(){
@@ -178,4 +230,48 @@ cmd_fix(){
     $SU rm -f "$db_lock"
     echo "==> Lock file deleted"
   fi
+}
+
+cmd_help(){
+  echo "Syntax: cup [OPTION] [-FLAG] <pkg|repo>"
+        echo ""
+        echo "Options:"
+        echo "  install       установить пакет из официальных репозиториев"
+        echo "  remove        удалить пакет"
+        echo "  update        обновить систему"
+        echo "  search        найти пакет везде"
+        echo "  list          показать локальную БД установленных пакетов"
+        echo "  fix           удалить зависший лок pacman (db.lck)"
+        echo "  modules       список подключенных модулей"
+        echo "  clean-cache   очистить кэш пакетов"
+        echo "  gitbuild      собрать пакет из git-репозитория"
+        echo ""
+        echo "Flags:"
+        echo "  --aur|-a      установка или поиск в AUR"
+        exit 0
+}
+
+cmd_help_install(){
+  echo "Syntax: cup install [-FLAG] <pkg>"
+        echo ""
+        echo "Flags:"
+        echo "  --aur|-a      установка только через AUR "
+        echo "  --refresh     обновление баз данных пакетов перед установкой"
+        exit 0
+}
+
+cmd_help_search(){
+  echo "Syntax: cup search [-FLAG] <pkg>"
+        echo ""
+        echo "Flags:"
+        echo "  --aur|-a      поиск только через AUR "
+        exit 0
+}
+
+cmd_help_gitbuild(){
+  echo "Syntax: cup gitbuild [-FLAG] <repo>"
+        echo ""
+        echo "Flags:"
+        echo "  --no-install    сборка, без установки "
+        exit 0
 }

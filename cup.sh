@@ -36,6 +36,12 @@ cmd_modules(){
 db_init
 
 while [ -n "${1:-}" ]; do
+
+  if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    cmd_help
+    shift
+  fi
+
 case "$1" in
   install)
     shift
@@ -82,8 +88,8 @@ case "$1" in
         source "$SCRIPT_DIR/modules/$1.sh"
         "cmd_install_$1"
     else
-        echo "==> Error: Command '$1' not found"
-        exit 1
+        echo "==> Command "$1" not found"
+        cmd_help
     fi
     set --
     ;;
